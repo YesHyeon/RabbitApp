@@ -1,16 +1,8 @@
+// The code that constitutes the page stack on the profile tab
+
 import * as React from 'react';
-import {
-  Text,
-  TouchableHighlight,
-  View,
-  StyleSheet,
-  ScrollView,
-  Image,
-} from 'react-native';
-import {useCallback, useState} from 'react';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {LoggedInParamList} from '../../AppInner';
-import {Dimensions} from 'react-native';
 import ProfileMain from './Profile';
 import ProfileEdit from './ProfileEdit';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
@@ -24,18 +16,23 @@ type ProfileScreenProps = NativeStackScreenProps<LoggedInParamList, 'Profile'>;
 
 const Stack = createNativeStackNavigator();
 
+// The main function
 function ProfilePage({navigation}: ProfileScreenProps) {
+  // code that constitutes the screen navigator
   return (
     <Stack.Navigator>
       <Stack.Screen
         name="ProfileMain"
         component={ProfileMain}
-        options={{headerShown: false}}
+        options={{headerShown: false, headerTitle: 'Profile'}}
       />
       <Stack.Screen
         name="ProfileEdit"
         component={ProfileEdit}
-        options={{headerShown: false}}
+        options={{
+          headerShown: true,
+          headerTitle: 'Edit',
+        }}
       />
     </Stack.Navigator>
   );

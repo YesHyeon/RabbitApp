@@ -1,37 +1,33 @@
+// The Profile Edit Tab Code
+
 import * as React from 'react';
 import {
   Text,
-  TouchableHighlight,
   View,
   StyleSheet,
   ScrollView,
-  Image,
   TextInput,
-  Pressable,
+  Alert,
 } from 'react-native';
-import {useCallback, useState} from 'react';
+import {useCallback, useState, useEffect} from 'react';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
-import {RootStackParamList} from '../../AppInner';
-import {Dimensions} from 'react-native';
 import {ProfilePageParamList} from './ProfilePage';
+import axios, {AxiosError} from 'axios';
+import Config from 'react-native-config';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
 type ProfileEditScreenProps = NativeStackScreenProps<
   ProfilePageParamList,
   'ProfileEdit'
 >;
 
+// The main function of Profile Edit page
 function ProfileEdit({navigation}: ProfileEditScreenProps) {
-  const windowWidth = Dimensions.get('window').width;
-  const windowHeight = Dimensions.get('window').height;
+  // Codes to store status values
+  const [crime, setCrime] = useState<String>('');
+  const [nickName, setNickName] = useState<string>('');
 
-  const [btnActive, setBtnActive] = useState(false);
-
-  const gender = ['M', 'W'];
-  const btn = [true, false];
-
-  const onSubmit = useCallback(() => {
-    navigation.goBack();
-  }, [navigation]);
+  let crimeIndex: number[] = [];
 
   const crimetype = [
     {id: 1, type: 'Assualt'},
@@ -60,7 +56,49 @@ function ProfileEdit({navigation}: ProfileEditScreenProps) {
     false,
   ]);
 
-  const ButtonClick = useCallback(
+  // The function that get the user's information from DB and stores it in the state value.
+  const getUserInfo = useCallback(async () => {
+    const userId = await EncryptedStorage.getItem('id');
+    try {
+      {
+        const response = await axios.get(
+          `${Config.API_URL}/api/user/${userId}`,
+        );
+        setNickName(response.data.nickname);
+        setCrime(response.data.crime);
+      }
+    } catch (error) {
+      const errorResponse = (error as AxiosError).response;
+      if (errorResponse) {
+      }
+    }
+  }, [nickName, crime]);
+
+  // Code to get the user's information from DB each time the page is loaded
+  useEffect(() => {
+    getUserInfo();
+  }, []);
+
+  useEffect(() => {
+    let newArr = [...isClicked];
+    if (crime !== '') {
+      crime.split(',').map((item: String) => {
+        newArr[Number(item)] = true;
+      }, []);
+    }
+    setIsClicked(newArr);
+  }, [crime]);
+
+  // The function that recognizes a nickname change and stores it in a state value
+  const onChangeNickName = useCallback(
+    text => {
+      setNickName(text);
+    },
+    [setNickName],
+  );
+
+  // The function that recognizes a crime change and stores it in a state value
+  const onChangeCrime = useCallback(
     (idx: Number) => {
       setIsClicked(prev =>
         prev.map((element, index) => {
@@ -68,25 +106,72 @@ function ProfileEdit({navigation}: ProfileEditScreenProps) {
         }),
       );
     },
+
     [isClicked],
   );
 
+  // The function that works when you click the Submit button
+  const onSubmit = useCallback(async () => {
+    const userId = await EncryptedStorage.getItem('id');
+
+    // Code that preprocesses data before sending crime data to the server
+    isClicked.map((item, index) => {
+      if (item === true) {
+        crimeIndex.push(Number(index));
+      }
+    });
+
+    if (isClicked.filter(item => item == true).length > 6) {
+      Alert.alert('You should choose up to six.');
+      return;
+    }
+    // Code that uses axios to communicate with the server to post profile change information
+    try {
+      {
+        const response = await axios.post(`${Config.API_URL}/api/user/update`, {
+          id: userId,
+          nickname: nickName,
+          crime: crimeIndex.join(),
+        });
+
+        // Code that uses axios to communicate with the server to put crime change information
+        if (response.data.isCrimeUpdated == true) {
+          const respone = axios.put(
+            `${Config.DIRECTION_API_URL}/api/profile/calculate`,
+            {
+              id: userId,
+            },
+          );
+          Alert.alert('It will take about 30 minutes to analyze');
+        } else {
+          Alert.alert('NickName Edit Complete');
+        }
+        navigation.goBack();
+      }
+    } catch (error) {
+      const errorResponse = (error as AxiosError).response;
+      if (errorResponse) {
+        Alert.alert(errorResponse?.data?.message);
+      }
+    } finally {
+    }
+  }, [nickName, crime, isClicked]);
+
   return (
-    <ScrollView>
+    <ScrollView style={styles.scrollView}>
       <View style={styles.container}>
         <Text style={styles.profileHead}>| Nickname</Text>
         <TextInput
+          onChangeText={onChangeNickName}
           style={styles.input}
-          placeholder=""
-          autoComplete="email"
-          textContentType="emailAddress"
+          placeholder={nickName}
           returnKeyType="next"
-          keyboardType="email-address"
           blurOnSubmit={false}
         />
-
-        <Text style={styles.profileHead}>| Dangers you want to avoid</Text>
-
+        <Text style={styles.profileHead}>
+          | Crimes you want to avoid (Up to 6)
+        </Text>
+        {/* Code to generate a button in the Crime Container */}
         <View style={styles.crimeContainer}>
           {crimetype.map((item, index) => {
             return (
@@ -102,7 +187,7 @@ function ProfileEdit({navigation}: ProfileEditScreenProps) {
                   }>
                   <Text
                     onPress={() => {
-                      ButtonClick(index);
+                      onChangeCrime(index);
                     }}
                     style={
                       isClicked[index]
@@ -119,22 +204,62 @@ function ProfileEdit({navigation}: ProfileEditScreenProps) {
             );
           })}
         </View>
-        <View style={styles.editButton}>
-          <Text style={styles.editButtonText} onPress={onSubmit}>
-            Submit
-          </Text>
+        <View style={styles.buttonContainer}>
+          <View style={styles.notNowButton}>
+            <Text style={styles.notNowButtonText} onPress={navigation.goBack}>
+              Not now
+            </Text>
+          </View>
+          <View style={styles.submitButton}>
+            <Text
+              style={styles.submitButtonText}
+              onPress={() => {
+                Alert.alert(
+                  'Alert',
+                  'If you change the crime type, it takes 30 minutes to analyze. Do you still want to change it?',
+                  [
+                    {
+                      text: 'NO',
+                      onPress: () => {
+                        navigation.goBack();
+                      },
+                      style: 'cancel',
+                    },
+                    {
+                      text: 'YES',
+                      onPress: () => {
+                        onSubmit();
+                      },
+                      style: 'default',
+                    },
+                  ],
+                  {
+                    cancelable: true,
+                    onDismiss: () =>
+                      Alert.alert(
+                        'This alert was dismissed by tapping outside of the alert dialog.',
+                      ),
+                  },
+                );
+              }}>
+              Submit
+            </Text>
+          </View>
         </View>
       </View>
     </ScrollView>
   );
 }
 
+//  Css apply Code
 const styles = StyleSheet.create({
+  scrollView: {height: '100%', backgroundColor: 'white'},
   container: {
+    backgroundColor: 'white',
     height: '100%',
-    width: '95%',
+    width: '100%',
     display: 'flex',
-    paddingVertical: 50,
+    paddingVertical: 70,
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
@@ -176,6 +301,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
+  buttonContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+  },
   profileHead: {
     width: '90%',
     fontSize: 17,
@@ -215,6 +344,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
     margin: 10,
+    marginBottom: 30,
   },
   optionButton: {
     backgroundColor: 'white',
@@ -236,12 +366,14 @@ const styles = StyleSheet.create({
   },
   crimeButtonContainer: {
     display: 'flex',
+
     width: 55,
     height: 90,
     backgroundColor: 'red',
   },
   crimeButton: {
     backgroundColor: 'white',
+    justifyContent: 'center',
     width: 90,
     paddingHorizontal: 4,
     paddingVertical: 5,
@@ -270,26 +402,42 @@ const styles = StyleSheet.create({
     color: 'black',
     fontSize: 13,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   crimeButtonTextActive: {
     color: 'white',
   },
-  editButton: {
-    backgroundColor: '#f4511e',
-    width: 150,
+  notNowButton: {
+    backgroundColor: 'white',
+    width: 100,
     paddingHorizontal: 4,
     paddingVertical: 5,
     margin: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 5,
+    borderColor: 'grey',
+    borderWidth: 0.5,
+  },
+  notNowButtonText: {
+    color: 'black',
+    textAlign: 'center',
+    fontSize: 15,
+  },
+  submitButton: {
+    backgroundColor: 'rgba(255, 129, 57, 0.95)',
+    width: 100,
+    height: 40,
+    paddingHorizontal: 4,
+    paddingVertical: 5,
+    margin: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 5,
     borderColor: 'grey',
     borderWidth: 1,
-    shadowOffset: {width: 1, height: 3},
-    shadowColor: 'black',
-    shadowRadius: 2,
-    shadowOpacity: 0.6,
   },
-  editButtonText: {
+  submitButtonText: {
     color: 'white',
     textAlign: 'center',
     fontSize: 15,

@@ -1,10 +1,9 @@
-// SignIn Screen Code
+// The SignIn Screen Code
 import React, {useCallback, useRef, useState} from 'react';
 import {
   View,
   Text,
   TextInput,
-  Touchable,
   Pressable,
   Alert,
   StyleSheet,
@@ -20,17 +19,24 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 
 type SignInScreenProps = NativeStackScreenProps<RootStackParamList, 'SignIn'>;
 
+// The main function of SignIn page
 function SignIn({navigation}: SignInScreenProps) {
+  // Codes to store status values
   const [email, setEmail] = useState('');
   const [passWord, setPassWord] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Code to communicate with global repository(Redux)
   const dispatch = useAppDispatch();
 
+  // The function that works when user clicks the Submit button
   const onSubmit = useCallback(async () => {
-    // if (!email || !email.trim()) {
-    //   return Alert.alert('Alert', 'Please Check your Email again');
-    // }
+    if (loading) {
+      return;
+    }
+    if (!email || !email.trim()) {
+      return Alert.alert('Alert', 'Please Check your Email again');
+    }
     if (!passWord || !passWord.trim()) {
       return Alert.alert('Alert', 'Please Check your Password again');
     }
@@ -48,56 +54,55 @@ function SignIn({navigation}: SignInScreenProps) {
       );
     }
 
+    // Code that uses axios to communicate with the server to post Signin information
     try {
       {
         setLoading(true);
-        const response = await axios.post(`${Config.API_URL}/api/user`, {
+        const response = await axios.post(`${Config.API_URL}/api/signIn`, {
           email: email,
           password: passWord,
-          nickname: 'ss',
-          crime: '1,2,3',
         });
-        // console.log(response);
-        // navigation.goBack();
+        // Code that stores the user's ID value in the local storage when logged in.
+        await EncryptedStorage.setItem('id', String(response.data.id));
+        setLoading(false);
+        // Code Store user's information in a global storage
         dispatch(
           userSlice.actions.setUser({
-            email: response.data.data.email,
-            nickName: response.data.data.nickName,
-            // accessToken: response.data.data.accessToken,
+            email: response.data.email,
+            nickName: response.data.nickName,
           }),
         );
-        console.log('id', response.data.data.id);
-        await EncryptedStorage.setItem('id', response.data.data.id);
-        Alert.alert('Login succeeded');
+
+        Alert.alert(response.data.message);
       }
     } catch (error) {
       const errorResponse = (error as AxiosError).response;
       setLoading(false);
-      Alert.alert('Login fault');
-      console.log(errorResponse);
-      if (errorResponse) {
-        Alert.alert('알림', 'error');
-      }
+      Alert.alert(errorResponse?.data?.message);
     } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [loading, email, passWord]);
 
+  // The function that moves to the SignUp page when the SignUp button is clicked.
   const onSignUp = useCallback(() => {
     navigation.navigate('SignUp');
   }, [navigation]);
 
+  // The function that recognizes an Email change and stores it in a state value
   const onChangeEmail = useCallback(text => {
     setEmail(text);
   }, []);
 
+  // The function that recognizes a Password change and stores it in a state value
   const onChangePassword = useCallback(text => {
     setPassWord(text);
   }, []);
 
+  // Code that stores the address value of the text input
   const emailRef = useRef<TextInput | null>(null);
   const passwordRef = useRef<TextInput | null>(null);
 
+  // Code to activate the SignIn button
   const canGoNext = email && passWord;
 
   return (
@@ -150,7 +155,6 @@ function SignIn({navigation}: SignInScreenProps) {
           disabled={!canGoNext}>
           <Text style={style.loginButtonText}>Sign In</Text>
         </Pressable>
-
         <Pressable onPress={onSignUp}>
           <Text
             style={StyleSheet.compose(
@@ -165,6 +169,7 @@ function SignIn({navigation}: SignInScreenProps) {
   );
 }
 
+//  Css apply Code
 const style = StyleSheet.create({
   container: {
     height: '100%',

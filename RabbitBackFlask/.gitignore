@@ -28,7 +28,6 @@ lib/
 lib64/
 parts/
 sdist/
-var/
 wheels/
 share/python-wheels/
 *.egg-info/
@@ -186,5 +185,11 @@ cython_debug/
 pyvenv.cfg
 .venv
 pip-selfcheck.json
+
+### google drive module ###
+client_secret.json
+cache/
+*.pickle
+*.pkl
 
 # End of https://www.toptal.com/developers/gitignore/api/venv

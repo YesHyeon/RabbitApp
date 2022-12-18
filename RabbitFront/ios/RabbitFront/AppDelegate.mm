@@ -4,6 +4,7 @@
 #import <React/RCTBridge.h>
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTRootView.h>
+#import "RNSplashScreen.h"
 
 #import <React/RCTAppSetupUtils.h>
 
@@ -33,7 +34,7 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {// add this line using the api key obtained from Google Console
-  [GMSServices provideAPIKey:@"AIzaSyB_nbHi0KEhdlrM8ioBv_GpYCeVH2p1-08"];
+  [GMSServices provideAPIKey:@"Google Map API Key"];
   RCTAppSetupPrepareApp(application);
 
   RCTBridge *bridge = [[RCTBridge alloc] initWithDelegate:self launchOptions:launchOptions];
@@ -59,6 +60,8 @@
   rootViewController.view = rootView;
   self.window.rootViewController = rootViewController;
   [self.window makeKeyAndVisible];
+  
+  [RNSplashScreen show];
   return YES;
 }
 

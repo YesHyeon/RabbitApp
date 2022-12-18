@@ -4,12 +4,10 @@ import {
   View,
   Text,
   TextInput,
-  Touchable,
   Pressable,
   Alert,
   StyleSheet,
   Image,
-  TouchableWithoutFeedback,
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
@@ -17,17 +15,29 @@ import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../../AppInner';
 import axios, {AxiosError} from 'axios';
 import Config from 'react-native-config';
-import EncryptedStorage from 'react-native-encrypted-storage';
 
 type SignInScreenProps = NativeStackScreenProps<RootStackParamList, 'SignIn'>;
 
-function SignIn({navigation}: SignInScreenProps) {
+// The main function of SignUp page
+function SignUp({navigation}: SignInScreenProps) {
+  // Codes to store status values
   const [email, setEmail] = useState('');
   const [passWord, setPassWord] = useState('');
-
   const [nickName, setNickName] = useState('');
-
   const [loading, setLoading] = useState(false);
+  const [isClicked, setIsClicked] = useState([
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+  ]);
 
   const crimetype = [
     {id: 1, type: 'Assualt'},
@@ -42,31 +52,20 @@ function SignIn({navigation}: SignInScreenProps) {
     {id: 10, type: 'Stalking'},
     {id: 11, type: 'Weapon'},
   ];
-  const [isClicked, setIsClicked] = useState([
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-  ]);
+
   const isClickedIndex: number[] = [];
 
   const isTrueNumber = isClicked.filter(item => item == true);
+
+  // Code to be executed when the isClicked state vaule is changed
   useEffect(() => {
     if (isTrueNumber.length == 7) {
       Alert.alert('You can choose up to six.');
     }
-    console.log('isTri', isTrueNumber);
-    console.log('isCl', isClicked);
     crimeIndex();
   }, [isClicked]);
 
+  // Code to be executed when the crime type button click is recognized
   const ButtonClick = useCallback(
     (idx: Number) => {
       setIsClicked(prev =>
@@ -90,7 +89,6 @@ function SignIn({navigation}: SignInScreenProps) {
     if (loading) {
       return;
     }
-
     if (!email || !email.trim()) {
       return Alert.alert('Alert', 'Please Check your Email again');
     }
@@ -110,47 +108,59 @@ function SignIn({navigation}: SignInScreenProps) {
         '비밀번호는 영문,숫자,특수문자($@^!%*#?&)를 모두 포함하여 8자 이상 입력해야합니다.',
       );
     }
-
+    // Code that uses axios to communicate with the server to post SignUp information
     try {
       {
         setLoading(true);
-        const response = await axios.post(`${Config.API_URL}/api/user`, {
+        const response = await axios.post(`${Config.API_URL}/api/signUp`, {
           email: email,
           password: passWord,
           nickname: nickName,
           crime: String(isClickedIndex),
         });
-        await EncryptedStorage.setItem('id', String(response.data.id));
-        Alert.alert('알림', '회원가입에 성공하였습니다.');
+
+        // Code that uses axios to communicate with the server to post SignUp Calculation information
+        const response2 = axios.post(
+          `${Config.DIRECTION_API_URL}/api/signup/calculate`,
+          {
+            id: response.data.userId,
+          },
+        );
+
+        Alert.alert('Sign Up succeed.');
+        setLoading(false);
         navigation.goBack();
       }
     } catch (error) {
       const errorResponse = (error as AxiosError).response;
       setLoading(false);
-      console.log('error', errorResponse);
       if (errorResponse) {
-        Alert.alert('알림', 'error');
+        Alert.alert(errorResponse?.data?.message);
       }
     } finally {
-      setLoading(false);
     }
   }, [loading, email, passWord, isClicked]);
 
+  // The function that recognizes an Email change and stores it in a state value
   const onChangeEmail = useCallback(text => {
     setEmail(text);
   }, []);
 
+  // The function that recognizes an Password change and stores it in a state value
   const onChangePassword = useCallback(text => {
     setPassWord(text);
   }, []);
 
+  // The function that recognizes an NickName change and stores it in a state value
   const onChangeNickName = useCallback(text => {
     setNickName(text);
   }, []);
 
+  // Code that stores the address value of the text input
   const emailRef = useRef<TextInput | null>(null);
   const passwordRef = useRef<TextInput | null>(null);
 
+  // Code to activate the SignUp button
   const canGoNext = email && passWord && isTrueNumber.length <= 6;
 
   return (
@@ -209,9 +219,10 @@ function SignIn({navigation}: SignInScreenProps) {
               clearButtonMode={'while-editing'}></TextInput>
           </View>
           <Text style={style.profileHead}>
-            | Dangers you want to avoid (Maximum 6)
+            | Crimes you want to avoid (Maximum 6)
           </Text>
           <View style={style.profileContainer}>
+            {/* Code to generate a button in the Crime Container */}
             {crimetype.map((item, index) => {
               return (
                 <View key={item.id} style={style.crimeButtonContainer}>
@@ -265,6 +276,7 @@ function SignIn({navigation}: SignInScreenProps) {
   );
 }
 
+//  Css apply Code
 const style = StyleSheet.create({
   container: {
     height: '100%',
@@ -296,8 +308,7 @@ const style = StyleSheet.create({
     paddingHorizontal: 15,
   },
   buttonZone: {
-    margin: 10,
-    padding: 20,
+    padding: 10,
     alignItems: 'center',
   },
   loginButton: {
@@ -332,10 +343,10 @@ const style = StyleSheet.create({
     height: 250,
     display: 'flex',
     flexDirection: 'row',
+    justifyContent: 'space-around',
     backgroundColor: 'white',
     padding: 10,
     margin: 10,
-    marginBottom: 20,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: 'grey',
@@ -349,9 +360,6 @@ const style = StyleSheet.create({
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'white',
-    flexWrap: 'wrap',
-    flexGrow: 1,
   },
   crimeButton: {
     backgroundColor: 'white',
@@ -382,4 +390,4 @@ const style = StyleSheet.create({
   },
 });
 
-export default SignIn;
+export default SignUp;
